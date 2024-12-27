@@ -44,10 +44,13 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @api
      */
-    public function dispatch($eventName, Event $event = null)
+    public function dispatch(object $event, ?string $eventName = null): object
     {
-        $this->laravelDispatcher->fire($eventName, $event);
-        return $this->symfonyDispatcher->dispatch($eventName, $event);
+        if ($eventName !== null) {
+            // TODO: Someone who understands events under the hood more should look into this
+            $this->laravelDispatcher->dispatch($eventName, [$event]);
+        }
+        return $this->symfonyDispatcher->dispatch($event, $eventName);
     }
 
     /**
@@ -60,7 +63,7 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @api
      */
-    public function addListener($eventName, $listener, $priority = 0)
+    public function addListener(string $eventName, callable $listener, int $priority = 0): void
     {
         $this->symfonyDispatcher->addListener($eventName, $listener, $priority);
     }
@@ -75,7 +78,7 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @api
      */
-    public function addSubscriber(EventSubscriberInterface $subscriber)
+    public function addSubscriber(EventSubscriberInterface $subscriber): void
     {
         $this->symfonyDispatcher->addSubscriber($subscriber);
     }
@@ -83,12 +86,12 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
     /**
      * Removes an event listener from the specified events.
      *
-     * @param string   $eventName The event to remove a listener from
-     * @param callable $listenerToBeRemoved The listener to remove
+     * @param string $eventName The event to remove a listener from
+     * @param callable $listener The listener to remove
      */
-    public function removeListener($eventName, $listenerToBeRemoved)
+    public function removeListener(string $eventName, callable $listener): void
     {
-        $this->symfonyDispatcher->removeListener($eventName, $listenerToBeRemoved);
+        $this->symfonyDispatcher->removeListener($eventName, $listener);
     }
 
     /**
@@ -96,7 +99,7 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @param EventSubscriberInterface $subscriber The subscriber
      */
-    public function removeSubscriber(EventSubscriberInterface $subscriber)
+    public function removeSubscriber(EventSubscriberInterface $subscriber): void
     {
         $this->symfonyDispatcher->removeSubscriber($subscriber);
     }
@@ -108,7 +111,7 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @return array The event listeners for the specified event, or all event listeners by event name
      */
-    public function getListeners($eventName = null)
+    public function getListeners($eventName = null): array
     {
         return $this->symfonyDispatcher->getListeners($eventName);
     }
@@ -120,7 +123,7 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * @return bool true if the specified event has any listeners, false otherwise
      */
-    public function hasListeners($eventName = null)
+    public function hasListeners($eventName = null): bool
     {
         return ($this->symfonyDispatcher->hasListeners($eventName) ||
             $this->laravelDispatcher->hasListeners($eventName));
@@ -131,12 +134,12 @@ abstract class EventDispatcherAdapter implements SymfonyDispatcher
      *
      * Returns null if the event or the listener does not exist.
      *
-     * @param string   $eventName The name of the event
+     * @param string $eventName The name of the event
      * @param callable $listener  The listener
      *
      * @return int|null The event listener priority
      */
-    public function getListenerPriority($eventName, $listener)
+    public function getListenerPriority(string $eventName, callable $listener): ?int
     {
         return $this->symfonyDispatcher->getListenerPriority($eventName, $listener);
     }

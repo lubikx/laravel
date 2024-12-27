@@ -6,9 +6,14 @@
  */
 return [
     /*
-     * Api key
+     * API key
      */
-    'api_key' => '',
+    'api_key' => env('TMDB_API_KEY', ''),
+
+    /*
+     * Bearer token (API Read Access Token)
+     */
+    'bearer_token' => env('TMDB_BEARER_TOKEN', ''),
 
     /**
      * Client options
@@ -35,6 +40,14 @@ return [
             'enabled' => true,
             // Keep the path empty or remove it entirely to default to storage/logs/tmdb.log
             'path' => storage_path('logs/tmdb.log')
+        ],
+
+        'http' => [
+            'client' => null,
+            'request_factory' => null,
+            'response_factory' => null,
+            'stream_factory' => null,
+            'uri_factory' => null,
         ]
     ],
 ];

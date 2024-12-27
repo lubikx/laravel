@@ -8,17 +8,17 @@ namespace Tmdb\Laravel;
 
 use Illuminate\Support\ServiceProvider;
 
-class TmdbServiceProviderLaravel5 extends ServiceProvider {
+class TmdbServiceProviderLaravel extends ServiceProvider {
 
     /**
      * Bootstrap the application events.
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->publishes([
-            $this->defaultConfig() => config_path('tmdb.php'),
+            $this->defaultConfig() => $this->app->configPath('tmdb.php'),
         ]);
     }
 
@@ -27,19 +27,20 @@ class TmdbServiceProviderLaravel5 extends ServiceProvider {
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
         $this->setupConfiguration();
 
-        $this->app->bind('Tmdb\Laravel\Adapters\EventDispatcherAdapter', 'Tmdb\Laravel\Adapters\EventDispatcherLaravel5');
+        $this->app->bind('Tmdb\Laravel\Adapters\EventDispatcherAdapter', 'Tmdb\Laravel\Adapters\EventDispatcherLaravel');
     }
 
     /**
      * Get the TMDB configuration from the config repository
      *
      * @return array
+     * @throws
      */
-    public function config()
+    public function config(): array
     {
         return $this->app['config']->get('tmdb');
     }
@@ -49,7 +50,7 @@ class TmdbServiceProviderLaravel5 extends ServiceProvider {
      *
      * @return  void
      */
-    private function setupConfiguration()
+    private function setupConfiguration(): void
     {
         $config = $this->defaultConfig();
         $this->mergeConfigFrom($config, 'tmdb');
@@ -60,7 +61,7 @@ class TmdbServiceProviderLaravel5 extends ServiceProvider {
      *
      * @return string
      */
-    private function defaultConfig()
+    private function defaultConfig(): string
     {
         return __DIR__ . '/config/tmdb.php';
     }

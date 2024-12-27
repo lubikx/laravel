@@ -7,10 +7,19 @@
 namespace Tmdb\Laravel;
 
 use Illuminate\Support\ServiceProvider;
+use Tmdb\Event\BeforeRequestEvent;
+use Tmdb\Event\RequestEvent;
 use Tmdb\Laravel\TmdbServiceProviderLaravel4;
-use Tmdb\Laravel\TmdbServiceProviderLaravel5;
-use Tmdb\ApiToken;
+use Tmdb\Laravel\TmdbServiceProviderLaravel;
+use Tmdb\Token\Api\ApiToken;
 use Tmdb\Client;
+use Tmdb\Event\Listener\Request\AcceptJsonRequestListener;
+use Tmdb\Event\Listener\Request\ApiTokenRequestListener;
+use Tmdb\Event\Listener\Request\ContentTypeJsonRequestListener;
+use Tmdb\Event\Listener\Request\UserAgentRequestListener;
+use Tmdb\Event\Listener\RequestListener;
+use Tmdb\Token\Api\BearerToken;
+
 
 class TmdbServiceProvider extends ServiceProvider
 {
@@ -74,12 +83,44 @@ class TmdbServiceProvider extends ServiceProvider
             $config = $this->provider->config();
             $options = $config['options'];
 
-            // Use an Event Dispatcher that uses the Laravel event dispatcher
-            $options['event_dispatcher'] = $this->app->make('Tmdb\Laravel\Adapters\EventDispatcherAdapter');
+            $ed = $this->app->make('Tmdb\Laravel\Adapters\EventDispatcherAdapter');
 
-            // Register the client using the key and options from config
-            $token = new ApiToken($config['api_key']);
-            return new Client($token, $options);
+            // Use an Event Dispatcher that uses the Laravel event dispatcher
+            $options['event_dispatcher']['adapter'] = $ed;
+
+            if (($config['bearer_token'] ?? '') !== '') {
+                $options['api_token'] = new BearerToken($config['bearer_key']);
+            } else if (($config['api_key'] ?? '') !== '') {
+                $options['api_token'] = new ApiToken($config['api_key']);
+            } else {
+                throw new \RuntimeException("php-tmdb-laravel requires bearer_token or api_key");
+            }
+
+
+            unset($options['log']);
+            unset($options['cache']);
+
+            $client = new Client($options);
+
+            /**
+             * Required event listeners and events to be registered with the PSR-14 Event Dispatcher.
+             */
+            $requestListener = new RequestListener($client->getHttpClient(), $ed);
+            $ed->addListener(RequestEvent::class, $requestListener);
+
+            $apiTokenListener = new ApiTokenRequestListener($client->getToken());
+            $ed->addListener(BeforeRequestEvent::class, $apiTokenListener);
+
+            $acceptJsonListener = new AcceptJsonRequestListener();
+            $ed->addListener(BeforeRequestEvent::class, $acceptJsonListener);
+
+            $jsonContentTypeListener = new ContentTypeJsonRequestListener();
+            $ed->addListener(BeforeRequestEvent::class, $jsonContentTypeListener);
+
+            $userAgentListener = new UserAgentRequestListener();
+            $ed->addListener(BeforeRequestEvent::class, $userAgentListener);
+
+            return $client;
         });
 
         // bind the configuration (used by the image helper)
@@ -99,9 +140,7 @@ class TmdbServiceProvider extends ServiceProvider
         $app = $this->app;
 
         // Pick the correct service provider for the current verison of Laravel
-        $this->provider = (version_compare($app::VERSION, '5.0', '<'))
-            ? new TmdbServiceProviderLaravel4($app)
-            : new TmdbServiceProviderLaravel5($app);
+        $this->provider = new TmdbServiceProviderLaravel($app);
     }
 
     /**
